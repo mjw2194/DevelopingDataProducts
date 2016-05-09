@@ -1,0 +1,95 @@
+---
+title       : Citibike Availability Deck
+subtitle    : created for the Data Science Certificate Specialization    
+author      : Maxwell J. Williams
+job         : 
+framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : tomorrow      # 
+widgets     : [shiny, interactive]            # {mathjax, quiz, bootstrap}
+mode        : selfcontained # {standalone, draft}
+knit        : slidify::knit2slides
+---
+
+<style type='text/css'>
+img {
+    max-height: 400px;
+    max-width: 964px;
+}
+</style>
+
+
+## Why use the Citibike Availability App?
+
+1. It's easy to find stations
+2. Get realtime availability status
+3. Avoid frustration
+
+--- .class #id 
+
+## Finding Stations
+
+The map on the citibike website and app can get cluttered.
+
+![](assets/img/citibike_map1.png)
+
+---
+
+## Get Realtime Updates
+
+Both my "Citibike Availability App" and the official citibike app deliver realtime updates regarding the availability of bikes at specific stations.
+
+---
+
+## Avoid Frustration
+
+However, understanding patterns in a specific station's activity would help you determine the likelyhood that a bike is available when you want one.
+
+---
+
+## Enter the Citibike Availability App!
+
+Find stations, get realtime station information AND understand trends in a station's activity level! The "Trends in Availability" plot depicts the flow of bikes to and from the satation and ultimately helps you avoid walking to an empty station! 
+
+```{r Citibike App, echo=F, fig.height=100, fig.width=100}
+library(ggplot2)
+d<- readRDS("./assets/app/data/citibike_stations_net_trips_processed.rds")
+
+
+        My_Station_Trend<- d %>%
+                filter(station_id == 518) %>%
+                mutate(station_id = max(station_id,na.rm = T),
+                       trips_started = ifelse(is.na(trips_started),0,trips_started),
+                       trips_stopped = ifelse(is.na(trips_stopped),0,trips_stopped),
+                       net_trips = trips_stopped - trips_started,
+                       day = wday(date, label = T, abbr = T),
+                       hour = str_pad(hour(date), width = 2, side = "left", pad = 0),
+                       min = str_pad(minute(date), width = 2, side = "left", pad = 0),
+                       date_time = paste(day,paste(hour,min, sep = ":"), sep = "-")) %>%
+                group_by(date_time) %>%
+                        summarise(mean_net_trips = round(mean(net_trips),digits = 1),
+                                  upper_net_trips = round(mean(net_trips) + sd(net_trips),digits = 1),
+                                  lower_net_trips = round(mean(net_trips) - sd(net_trips),digits = 1)) %>%
+                        separate(col = "date_time",into = c("Day","Time"), sep = "-") %>%
+                filter(Day == "Fri")
+        
+
+        Trend<- ggplot(data = My_Station_Trend,
+                       aes(x = Time, y = mean_net_trips,
+                           ymin = lower_net_trips,
+                           ymax = upper_net_trips))
+        Trend<- Trend + geom_pointrange()
+        Trend<- Trend + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+        Trend<- Trend + geom_hline(aes(yintercept = 0), size = 1, colour = "red", alpha = 0.5)
+```
+
+
+```{r Plot, echo = F}
+Trend     
+        
+```
+
+
+
+
+
